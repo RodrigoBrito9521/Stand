@@ -9,13 +9,38 @@ import (
 )
 
 func getVehicles(context *gin.Context) {
-	vehicle, err := models.GetAllVehicles()
+	vehicleType := context.Query("type")
+	brand := context.Query("brand")
+	yearStr := context.Query("year")
 
+	var year int
+	if yearStr != "" {
+		parsedYear, err := strconv.Atoi(yearStr)
+		if err != nil {
+			context.JSON(http.StatusBadRequest, gin.H{"message": "Invalid year format."})
+			return
+		}
+		year = parsedYear
+	}
+
+	// If any filters are provided, use filtered search
+	if vehicleType != "" || brand != "" || year > 0 {
+		vehicles, err := models.GetVehiclesWithFilters(vehicleType, brand, year)
+		if err != nil {
+			context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch vehicles. Try again later."})
+			return
+		}
+		context.JSON(http.StatusOK, vehicles)
+		return
+	}
+
+	// Otherwise, get all vehicles
+	vehicles, err := models.GetAllVehicles()
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch vehicles. Try again later."})
 		return
 	}
-	context.JSON(http.StatusOK, vehicle)
+	context.JSON(http.StatusOK, vehicles)
 }
 
 func getVehicle(context *gin.Context) {

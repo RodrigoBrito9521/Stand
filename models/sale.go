@@ -24,7 +24,7 @@ type SaleWithDetails struct {
 }
 
 func (s *Sale) Save() error {
-	// First check if vehicle is already sold
+	// ve se o vehicle ja foi vendido na tabela sales
 	var existingSaleID int64
 	checkQuery := "SELECT id FROM sales WHERE vehicle_id = ?"
 	err := db.DB.QueryRow(checkQuery, s.VehicleID).Scan(&existingSaleID)
@@ -36,7 +36,7 @@ func (s *Sale) Save() error {
 		return err
 	}
 
-	// Check if vehicle exists and is available
+	// Ve se o vehicle existe e se não foi já registado como sold
 	vehicle, err := GetVehicleByID(s.VehicleID)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (s *Sale) Save() error {
 		return &VehicleAlreadySoldError{VehicleID: s.VehicleID}
 	}
 
-	// Check if client exists
+	// Ve se o cliente existe
 	_, err = GetClientByID(s.ClientID)
 	if err != nil {
 		return err

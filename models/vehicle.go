@@ -9,7 +9,7 @@ type Vehicle struct {
 	Type   string `binding:"required"`
 	Brand  string `binding:"required"`
 	Model  string `binding:"required"`
-	Year   int64  `binding:"required"`
+	Year   int    `binding:"required"`
 	Motor  string `binding:"required"`
 	Status string `binding:"required"`
 }
@@ -111,30 +111,41 @@ func (vehicle Vehicle) Delete() error {
 	_, err = stmt.Exec(vehicle.ID)
 	return err
 }
-func GetVehicleByBrand(brand string) (*Vehicle, error) {
-	query := "SELECT * FROM vehicles WHERE brand = ?"
-	row := db.DB.QueryRow(query, brand)
-	var vehicle Vehicle
 
-	err := row.Scan(&vehicle.ID, &vehicle.Type, &vehicle.Brand, &vehicle.Model, &vehicle.Year, &vehicle.Motor, &vehicle.Status)
+func GetVehiclesWithFilters(vehicleType, brand string, year int) ([]Vehicle, error) {
+	query := "SELECT * FROM vehicles WHERE 1=1"
+	var args []interface{}
 
+	if vehicleType != "" {
+		query += " AND type = ?"
+		args = append(args, vehicleType)
+	}
+
+	if brand != "" {
+		query += " AND brand = ?"
+		args = append(args, brand)
+	}
+
+	if year > 0 {
+		query += " AND year = ?"
+		args = append(args, year)
+	}
+
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return &vehicle, nil
-}
-
-func GetVehicleByYear(year int64) (*Vehicle, error) {
-	query := "SELECT * FROM vehicles WHERE year = ?"
-	row := db.DB.QueryRow(query, year)
-	var vehicle Vehicle
-
-	err := row.Scan(&vehicle.ID, &vehicle.Type, &vehicle.Brand, &vehicle.Model, &vehicle.Year, &vehicle.Motor, &vehicle.Status)
-
-	if err != nil {
-		return nil, err
+	var vehicles []Vehicle
+	for rows.Next() {
+		var vehicle Vehicle
+		err := rows.Scan(&vehicle.ID, &vehicle.Type, &vehicle.Brand, &vehicle.Model, &vehicle.Year, &vehicle.Motor, &vehicle.Status)
+		if err != nil {
+			return nil, err
+		}
+		vehicles = append(vehicles, vehicle)
 	}
 
-	return &vehicle, nil
+	return vehicles, nil
 }

@@ -7,12 +7,10 @@ import (
 func RegisterRoutes(server *gin.Engine) {
 	server.GET("/vehicles", getVehicles)
 	server.GET("/vehicles/:id", getVehicle)
-
-	//server.GET("/vehicles/:id", getVehicleByBrand)
-	//server.GET("/vehicles/:id", getVehicleByYear)
 	server.POST("/vehicles", createVehicle)
 	server.PUT("/vehicles/:id", updateVehicle)
 	server.DELETE("/vehicles/:id", deleteVehicle)
+	// /vehicles?type=carro&brand=Toyota&year=2020
 
 	server.GET("/clients", getClients)
 	server.GET("/clients/:id", getClient)
