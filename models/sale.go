@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"log"
 	"time"
 
 	"github.com/Stand/db"
@@ -15,6 +16,7 @@ type Sale struct {
 	SaleDate  time.Time `json:"sale_date"`
 }
 
+// SaleWithDetails represents a sale with client and vehicle information
 type SaleWithDetails struct {
 	ID       int64     `json:"id"`
 	Price    float64   `json:"price"`
@@ -24,61 +26,68 @@ type SaleWithDetails struct {
 }
 
 func (s *Sale) Save() error {
-	// ve se o vehicle ja foi vendido na tabela sales
+	log.Printf("[v0] Starting Sale.Save() with data: %+v", s)
+
+	// First check if vehicle is already sold
 	var existingSaleID int64
-	checkQuery := "SELECT id FROM sales WHERE vehicle_id = ?"
+	checkQuery := "SELECT id FROM sales WHERE vehicle_id = $1"
 	err := db.DB.QueryRow(checkQuery, s.VehicleID).Scan(&existingSaleID)
 
 	if err != sql.ErrNoRows {
 		if err == nil {
+			log.Printf("[v0] Vehicle %d is already sold", s.VehicleID)
 			return &VehicleAlreadySoldError{VehicleID: s.VehicleID}
 		}
+		log.Printf("[v0] Error checking existing sale: %v", err)
 		return err
 	}
 
-	// Ve se o vehicle existe e se não foi já registado como sold
+	// Check if vehicle exists and is available
 	vehicle, err := GetVehicleByID(s.VehicleID)
 	if err != nil {
+		log.Printf("[v0] Error getting vehicle: %v", err)
 		return err
 	}
 
 	if vehicle.Status == "sold" {
+		log.Printf("[v0] Vehicle %d status is already 'sold'", s.VehicleID)
 		return &VehicleAlreadySoldError{VehicleID: s.VehicleID}
 	}
 
-	// Ve se o cliente existe
+	// Check if client exists
 	_, err = GetClientByID(s.ClientID)
 	if err != nil {
+		log.Printf("[v0] Error getting client: %v", err)
 		return err
 	}
 
 	// Create the sale
 	s.SaleDate = time.Now()
 	query := `INSERT INTO sales (client_id, vehicle_id, price, sale_date)
-	VALUES (?, ?, ?, ?)`
+	VALUES ($1, $2, $3, $4) RETURNING id`
 
-	stmt, err := db.DB.Prepare(query)
+	log.Printf("[v0] SQL Query: %s", query)
+	log.Printf("[v0] Parameters: client_id=%d, vehicle_id=%d, price=%.2f, sale_date=%v",
+		s.ClientID, s.VehicleID, s.Price, s.SaleDate)
+
+	err = db.DB.QueryRow(query, s.ClientID, s.VehicleID, s.Price, s.SaleDate).Scan(&s.ID)
 	if err != nil {
+		log.Printf("[v0] QueryRow/Scan error: %v", err)
 		return err
 	}
-	defer stmt.Close()
 
-	result, err := stmt.Exec(s.ClientID, s.VehicleID, s.Price, s.SaleDate)
-	if err != nil {
-		return err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
-	s.ID = id
+	log.Printf("[v0] Sale saved successfully with ID: %d", s.ID)
 
 	// Update vehicle status to sold
-	updateQuery := "UPDATE vehicles SET status = 'sold' WHERE id = ?"
+	updateQuery := "UPDATE vehicles SET status = 'sold' WHERE id = $1"
 	_, err = db.DB.Exec(updateQuery, s.VehicleID)
+	if err != nil {
+		log.Printf("[v0] Error updating vehicle status: %v", err)
+		return err
+	}
 
-	return err
+	log.Printf("[v0] Vehicle %d status updated to 'sold'", s.VehicleID)
+	return nil
 }
 
 func GetAllSales() ([]SaleWithDetails, error) {
@@ -126,7 +135,7 @@ func GetSaleByID(id int64) (*SaleWithDetails, error) {
 	FROM sales s
 	JOIN clients c ON s.client_id = c.id
 	JOIN vehicles v ON s.vehicle_id = v.id
-	WHERE s.id = ?`
+	WHERE s.id = $1`
 
 	row := db.DB.QueryRow(query, id)
 
@@ -154,18 +163,49 @@ func (e *VehicleAlreadySoldError) Error() string {
 	return "vehicle is already sold"
 }
 
-// Helper functions to get client and vehicle by ID (standalone functions)
 /*
-func GetClientByID(id int64) (*Client, error) {
-	query := "SELECT id, name, email, phone FROM clients WHERE id=?"
-	row := db.DB.QueryRow(query, id)
+// Helper functions to get client and vehicle by ID (standalone functions)
 
-	var client Client
-	err := row.Scan(&client.ID, &client.Name, &client.Email, &client.Phone)
-	if err != nil {
-		return nil, err
+	func GetClientByID(id int64) (*Client, error) {
+		query := "SELECT id, name, email, phone FROM clients WHERE id=$1"
+		row := db.DB.QueryRow(query, id)
+
+		var client Client
+		err := row.Scan(&client.ID, &client.Name, &client.Email, &client.Phone)
+		if err != nil {
+			return nil, err
+		}
+
+		return &client, nil
 	}
 
-	return &client, nil
+	func GetVehicleByID(id int64) (*Vehicle, error) {
+		query := "SELECT id, type, brand, model, year, motor, status FROM vehicles WHERE id=$1"
+		row := db.DB.QueryRow(query, id)
 
+		var vehicle Vehicle
+		err := row.Scan(&vehicle.ID, &vehicle.Type, &vehicle.Brand, &vehicle.Model, &vehicle.Year, &vehicle.Motor, &vehicle.Status)
+		if err != nil {
+			return nil, err
+		}
+
+		return &vehicle, nil
+	}
+
+type Client struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Phone string `json:"phone"`
+}
+
+type Vehicle struct {
+	ID     int64  `json:"id"`
+	Type   string `json:"type"`
+	Brand  string `json:"brand"`
+	Model  string `json:"model"`
+	Year   int    `json:"year"`
+	Motor  string `json:"motor"`
+	Status string `json:"status"`
+}
 */

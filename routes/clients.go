@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -35,20 +36,28 @@ func getClient(context *gin.Context) {
 }
 
 func createClient(context *gin.Context) {
+	log.Println("Starting createClient handler")
+
 	var client models.Client
 	err := context.ShouldBindJSON(&client)
 
 	if err != nil {
+		log.Printf("JSON binding error: %v", err)
 		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
 		return
 	}
 
+	log.Printf("Parsed client data: %+v", client)
+
 	err = client.Save()
 
 	if err != nil {
+		log.Printf("Database save error: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not create client. Try again later."})
 		return
 	}
+
+	log.Println("Client created successfully")
 	context.JSON(http.StatusCreated, gin.H{"message": "Client created!", "client": client})
 }
 
@@ -59,7 +68,7 @@ func updateClient(context *gin.Context) {
 		return
 	}
 
-	_, err = models.GetClientByID(clientId)
+	//client, err := models.GetClientByID(clientId)
 
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch the client."})

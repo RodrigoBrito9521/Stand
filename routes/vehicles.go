@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -62,23 +63,29 @@ func getVehicle(context *gin.Context) {
 }
 
 func createVehicle(context *gin.Context) {
+	log.Println("Starting createVehicle handler")
+
 	var vehicle models.Vehicle
 	err := context.ShouldBindJSON(&vehicle)
 
 	if err != nil {
+		log.Printf("JSON binding error: %v", err)
 		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
 		return
 	}
 
+	log.Printf("Parsed vehicle data: %+v", vehicle)
+
 	err = vehicle.Save()
 
 	if err != nil {
+		log.Printf("Database save error: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not create vehicle. Try again later."})
 		return
 	}
 
+	log.Println("Vehicle created successfully")
 	context.JSON(http.StatusCreated, gin.H{"message": "Vehicle created!", "vehicle": vehicle})
-
 }
 
 func updateVehicle(context *gin.Context) {

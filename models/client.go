@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/Stand/db"
+	"log"
 )
 
 type Client struct {
@@ -12,20 +13,22 @@ type Client struct {
 }
 
 func (c *Client) Save() error {
+	log.Printf("[v0] Starting Client.Save() with data: %+v", c)
+
 	query := `INSERT INTO clients (name, email, phone)
-	VALUES (?, ?, ?)`
-	stmt, err := db.DB.Prepare(query)
+	VALUES ($1, $2, $3) RETURNING id`
+
+	log.Printf("[v0] SQL Query: %s", query)
+	log.Printf("[v0] Parameters: name=%s, email=%s, phone=%d", c.Name, c.Email, c.Phone)
+
+	err := db.DB.QueryRow(query, c.Name, c.Email, c.Phone).Scan(&c.ID)
 	if err != nil {
+		log.Printf("[v0] QueryRow/Scan error: %v", err)
 		return err
 	}
-	defer stmt.Close()
-	result, err := stmt.Exec(c.Name, c.Email, c.Phone)
-	if err != nil {
-		return err
-	}
-	id, err := result.LastInsertId()
-	c.ID = id
-	return err
+
+	log.Printf("[v0] Client saved successfully with ID: %d", c.ID)
+	return nil
 }
 
 func GetAllClients() ([]Client, error) {
@@ -50,7 +53,7 @@ func GetAllClients() ([]Client, error) {
 }
 
 func GetClientByID(id int64) (*Client, error) {
-	query := "SELECT * FROM clients WHERE id=?"
+	query := "SELECT * FROM clients WHERE id=$1"
 	row := db.DB.QueryRow(query, id)
 
 	var client Client
@@ -65,28 +68,42 @@ func GetClientByID(id int64) (*Client, error) {
 func (c *Client) Update() error {
 	query := `
 	UPDATE clients
-	SET name=?,email=?,phone=?
-	WHERE id=?`
+	SET name=$1,email=$2,phone=$3
+	WHERE id=$4`
 
 	stmt, err := db.DB.Prepare(query)
 
 	if err != nil {
+		log.Printf("[v0] Prepare error: %v", err)
 		return err
 	}
 
 	defer stmt.Close()
 
 	_, err = stmt.Exec(c.Name, c.Email, c.Phone, c.ID)
-	return err
+	if err != nil {
+		log.Printf("[v0] Exec error: %v", err)
+		return err
+	}
+
+	log.Printf("[v0] Client updated successfully with ID: %d", c.ID)
+	return nil
 }
 
 func (c *Client) Delete() error {
-	query := "DELETE FROM clients WHERE id=?"
+	query := "DELETE FROM clients WHERE id=$1"
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
+		log.Printf("[v0] Prepare error: %v", err)
 		return err
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(c.ID)
-	return err
+	if err != nil {
+		log.Printf("[v0] Exec error: %v", err)
+		return err
+	}
+
+	log.Printf("[v0] Client deleted successfully with ID: %d", c.ID)
+	return nil
 }

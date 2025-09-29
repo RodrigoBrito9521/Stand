@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -37,17 +38,23 @@ func getSale(context *gin.Context) {
 }
 
 func createSale(context *gin.Context) {
+	log.Println("Starting createSale handler")
+
 	var sale models.Sale
 	err := context.ShouldBindJSON(&sale)
 
 	if err != nil {
+		log.Printf("JSON binding error: %v", err)
 		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
 		return
 	}
 
+	log.Printf("Parsed sale data: %+v", sale)
+
 	err = sale.Save()
 
 	if err != nil {
+		log.Printf("Database save error: %v", err)
 		// Check if it's a vehicle already sold error
 		if vehicleErr, ok := err.(*models.VehicleAlreadySoldError); ok {
 			context.JSON(http.StatusConflict, gin.H{
@@ -61,5 +68,6 @@ func createSale(context *gin.Context) {
 		return
 	}
 
+	log.Println("Sale created successfully")
 	context.JSON(http.StatusCreated, gin.H{"message": "Sale created successfully!", "sale": sale})
 }
