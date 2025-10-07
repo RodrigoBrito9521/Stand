@@ -154,7 +154,6 @@ func GetSaleByID(id int64) (*SaleWithDetails, error) {
 	return &sale, nil
 }
 
-// Custom error for vehicle already sold
 type VehicleAlreadySoldError struct {
 	VehicleID int64
 }
@@ -162,50 +161,3 @@ type VehicleAlreadySoldError struct {
 func (e *VehicleAlreadySoldError) Error() string {
 	return "vehicle is already sold"
 }
-
-/*
-// Helper functions to get client and vehicle by ID (standalone functions)
-
-	func GetClientByID(id int64) (*Client, error) {
-		query := "SELECT id, name, email, phone FROM clients WHERE id=$1"
-		row := db.DB.QueryRow(query, id)
-
-		var client Client
-		err := row.Scan(&client.ID, &client.Name, &client.Email, &client.Phone)
-		if err != nil {
-			return nil, err
-		}
-
-		return &client, nil
-	}
-
-	func GetVehicleByID(id int64) (*Vehicle, error) {
-		query := "SELECT id, type, brand, model, year, motor, status FROM vehicles WHERE id=$1"
-		row := db.DB.QueryRow(query, id)
-
-		var vehicle Vehicle
-		err := row.Scan(&vehicle.ID, &vehicle.Type, &vehicle.Brand, &vehicle.Model, &vehicle.Year, &vehicle.Motor, &vehicle.Status)
-		if err != nil {
-			return nil, err
-		}
-
-		return &vehicle, nil
-	}
-
-type Client struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Phone string `json:"phone"`
-}
-
-type Vehicle struct {
-	ID     int64  `json:"id"`
-	Type   string `json:"type"`
-	Brand  string `json:"brand"`
-	Model  string `json:"model"`
-	Year   int    `json:"year"`
-	Motor  string `json:"motor"`
-	Status string `json:"status"`
-}
-*/

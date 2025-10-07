@@ -68,14 +68,10 @@ func updateClient(context *gin.Context) {
 		return
 	}
 
-	//client, err := models.GetClientByID(clientId)
-
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch the client."})
 		return
 	}
-
-	// If you need authentication, implement it separately
 
 	var updatedClient models.Client
 	err = context.ShouldBindJSON(&updatedClient)
@@ -107,8 +103,6 @@ func deleteClient(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch the client."})
 		return
 	}
-
-	// If you need authentication, implement it as middleware
 
 	err = client.Delete()
 

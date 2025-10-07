@@ -23,3 +23,4 @@ CREATE TABLE IF NOT EXISTS sales (
     sale_date TIMESTAMP NOT NULL
     );
 
+
